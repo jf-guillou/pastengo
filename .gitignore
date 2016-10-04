@@ -1,2 +1,8 @@
-pastebin
+# IntelliJ IDE
+.idea
+*.iml
+
+# App data
+*.sqlite
 config.json
+

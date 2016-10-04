@@ -1,10 +1,9 @@
 {
-	"Port": ":8080",
-	"Length": 6,
-	"Username": "",
-	"Password": "",
-	"Name": "",
-	"Address": "https://p.pantsu.cat"
-
+  "Address": "https://localhost:8080",
+  "Port": ":8080",
+  "Length": 6,
+  "DBType": "sqlite3",
+  "DBName": "pastengodb.sqlite",
+  "DBUsername": "",
+  "DBPassword": ""
 }
-
