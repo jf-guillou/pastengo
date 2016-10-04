@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"html"
 	"html/template"
 	"io"
@@ -90,6 +91,9 @@ type Response struct {
 
 // GetDB opens database and returns handle
 func GetDB() *sql.DB {
+	if dbType == "" || dbString == "" {
+		log.Fatal("db.Open: Missing database configuration")
+	}
 	db, err := sql.Open(dbType, dbString)
 	if err != nil {
 		log.Fatal("db.Open:", err)
@@ -99,6 +103,10 @@ func GetDB() *sql.DB {
 
 // GenerateName uses uniuri to generate a random string that isn't in the database
 func GenerateName() (string, error) {
+	if configuration.Length <= 0 {
+		return "", errors.New("Paste ID is too short")
+	}
+
 	db := GetDB()
 	defer db.Close()
 
@@ -117,7 +125,7 @@ func GenerateName() (string, error) {
 
 // ValidPasteId scans paste ID for unauthorized characters
 func ValidPasteId(pasteId string) bool {
-	return !pasteRegex.Match([]byte(pasteId))
+	return len(pasteId) <= MAX_ID_LEN && !pasteRegex.Match([]byte(pasteId))
 }
 
 // Sha1 hashes paste content used for duplicate checks
@@ -195,9 +203,6 @@ func Save(raw string, expiry string) (*Response, error) {
 // GetPaste extracts paste from database
 func GetPaste(paste string) (string, error) {
 	pasteId := html.EscapeString(paste)
-	if len(pasteId) > MAX_ID_LEN {
-		return "", &InvalidPasteError{}
-	}
 	if !ValidPasteId(pasteId) {
 		return "", &InvalidPasteError{}
 	}
@@ -392,6 +397,10 @@ func LoadConfiguration() {
 		configuration.Length = MAX_ID_LEN
 	}
 
+	if configuration.Length <= 0 {
+		configuration.Length = 1
+	}
+
 	switch configuration.DBType {
 	case "mysql":
 		dbString = configuration.DBUsername + ":" + configuration.DBPassword + "@/" + configuration.DBName + "?charset=utf8"
@@ -411,7 +420,6 @@ func CheckDB() {
 
 	_, err := db.Query("SELECT 1 FROM pastebin LIMIT 1")
 	if err != nil {
-		log.Println(err)
 		_, err = db.Exec(`
         CREATE TABLE pastebin (
             id VARCHAR(30) NOT NULL,
