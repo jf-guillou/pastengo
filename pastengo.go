@@ -23,7 +23,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// App configuration from config.json
+// Configuration read from config.json
 type Configuration struct {
 	// ADDRESS that pastengo will return links for
 	Address string
@@ -46,20 +46,21 @@ var configuration Configuration
 // DB configuration used by SQL driver
 var dbString, dbType string
 
-// Paste ID maximum string length
+// MAX_ID_LEN sets paste ID maximum string length
 const MAX_ID_LEN int = 30
+// MAX_KEY_LEN sets delkey maximum string length
 const MAX_KEY_LEN int = 40
 
-// Paste ID authorized characters
+// pasteRegex lists paste ID authorized characters
 var pasteRegex *regexp.Regexp = regexp.MustCompile("[^" + string(uniuri.StdChars) + "]")
 
-// HTML templates for rendering
+// templates for HTML rendering
 var templates = template.Must(template.ParseFiles(
 	"assets/html/paste.html",
 	"assets/html/index.html",
 ))
 
-// Error structs
+// InvalidPasteError save & get paste error structs
 type InvalidPasteError struct{}
 
 func (e *InvalidPasteError) Error() string {
@@ -76,7 +77,7 @@ type Page struct {
 	Clone    string
 }
 
-// Paste struct
+// Response paste struct
 type Response struct {
 	Success bool   `json:"success"`
 	ID      string `json:"id"`
@@ -86,7 +87,7 @@ type Response struct {
 	Delkey  string `json:"delkey"`
 }
 
-// Short database open
+// GetDB opens database and returns handle
 func GetDB() *sql.DB {
 	db, err := sql.Open(dbType, dbString)
 	if err != nil {
@@ -95,7 +96,7 @@ func GetDB() *sql.DB {
 	return db
 }
 
-// Use uniuri to generate a random string that isn't in the database
+// GenerateName uses uniuri to generate a random string that isn't in the database
 func GenerateName() (string, error) {
 	db := GetDB()
 	defer db.Close()
@@ -113,12 +114,12 @@ func GenerateName() (string, error) {
 	}
 }
 
-// Check paste ID for unauthorized characters
+// ValidPasteId scans paste ID for unauthorized characters
 func ValidPasteId(pasteId string) bool {
 	return !pasteRegex.Match([]byte(pasteId))
 }
 
-// Hash paste content used for duplicate checks
+// Sha1 hashes paste content used for duplicate checks
 func Sha1(paste string) string {
 	hasher := sha1.New()
 
@@ -126,7 +127,7 @@ func Sha1(paste string) string {
 	return base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 }
 
-// Parse expiration duration from HTML form
+// DurationFromExpiry parses expiration duration from HTML form
 func DurationFromExpiry(expiry string) time.Duration {
 	if expiry == "" { // Default duration is almost infinite (20 years)
 		expiry = "P20Y"
@@ -143,7 +144,7 @@ func DurationFromExpiry(expiry string) time.Duration {
 	return dura.ToDuration()
 }
 
-// Save paste to database
+// Save pastes to database
 func Save(raw string, expiry string) (*Response, error) {
 	db := GetDB()
 	defer db.Close()
@@ -190,7 +191,7 @@ func Save(raw string, expiry string) (*Response, error) {
 	return &Response{true, id, sha, url, len(dataEscaped), delKey}, nil
 }
 
-// Extract paste from database
+// GetPaste extracts paste from database
 func GetPaste(paste string) (string, error) {
 	pasteId := html.EscapeString(paste)
 	if len(pasteId) > MAX_ID_LEN {
@@ -227,7 +228,7 @@ func GetPaste(paste string) (string, error) {
 	return html.UnescapeString(s), nil
 }
 
-// Handle generating the root page
+// RootHandler handles generating the root page
 func RootHandler(w http.ResponseWriter, _ *http.Request) {
 	err := templates.ExecuteTemplate(w, "index.html", &Page{Title: "Pastengo", Body: []byte("")})
 	if err != nil {
@@ -235,7 +236,7 @@ func RootHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// Handle saving paste data and redirect to its url
+// SaveHandler handles saving paste data and redirect to its url
 func SaveHandler(w http.ResponseWriter, r *http.Request) {
 	paste := r.FormValue("p")
 	expiry := r.FormValue("expiry")
@@ -258,7 +259,7 @@ func SaveHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, b.URL, http.StatusFound)
 }
 
-// Handle raw paste content display
+// RawHandler handles raw paste content display
 func RawHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	paste := vars["pasteId"]
@@ -279,7 +280,7 @@ func RawHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, s)
 }
 
-// Handle paste content download
+// DownloadHandler handles paste content download
 func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	paste := vars["pasteId"]
@@ -301,7 +302,7 @@ func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, s)
 }
 
-// Handle the generation of paste pages with the links
+// PasteHandler handles the generation of paste pages with the links
 func PasteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	paste := vars["pasteId"]
@@ -337,7 +338,7 @@ func PasteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Handle clone command and prefill new paste template with content
+// CloneHandler handles clone command and prefill new paste template with content
 func CloneHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	paste := vars["pasteId"]
@@ -373,7 +374,7 @@ func CloneHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Open and read config file, set up database
+// LoadConfiguration opens and reads config file, then sets up database
 func LoadConfiguration() {
 	file, err := os.Open("config.json")
 	if err != nil {
@@ -402,7 +403,7 @@ func LoadConfiguration() {
 	}
 }
 
-// Verify DB link and table existence. Creates it if necessary
+// CheckDB verifies DB link and table existence. Creates it if necessary
 func CheckDB() {
 	db := GetDB()
 	defer db.Close()
