@@ -1,33 +1,32 @@
-#Golang Pastebin
-[![Build Status](https://travis-ci.org/ewhal/Pastebin.svg?branch=master)](https://travis-ci.org/ewhal/Pastebin) [![GoDoc](https://godoc.org/github.com/ewhal/Pastebin?status.svg)](https://godoc.org/github.com/ewhal/Pastebin) [![Go Report Card](https://goreportcard.com/badge/github.com/ewhal/Pastebin)](https://goreportcard.com/report/github.com/ewhal/Pastebin) [![MIT
-licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/ewhal/Pastebin/master/LICENSE.md)
+#Pastengo
+[![Build Status](https://travis-ci.org/jf-guillou/pastengo.svg?branch=master)](https://travis-ci.org/jf-guillou/pastengo) [![GoDoc](https://godoc.org/github.com/jf-guillou/pastengo?status.svg)](https://godoc.org/github.com/jf-guillou/pastengo) [![Go Report Card](https://goreportcard.com/badge/github.com/jf-guillou/pastengo)](https://goreportcard.com/report/github.com/jf-guillou/pastengo) [![MIT
+licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/jf-guillou/pastengo/master/LICENSE.md)
 
-Modern self-hosted pastebin service with a restful API.
+Modern self-hosted pastebin service written in Go.
 
 ## Motivation
 Many Pastebin services exist but all are more complicated than they need to be.
 That is why I decided to write a pastebin service in golang.
 
-![paste](http://i.imgur.com/7BeCKa3.png)
+This was originally a fork from [https://github.com/ewhal/Pastebin](https://github.com/ewhal/Pastebin), 
+although the code has severely been modified and functionalities altered
+
+Supports mysql and sqlite3 database drivers
+
+![Paste here](https://img.thetabx.net/ZpeZn.jpg)
+![Paste content](https://img.thetabx.net/xi3sy.jpg)
 
 ## Getting started
 ### Prerequisities
-* pygmentize
 * go
-* mariadb
-
-```
-pip install pygmentize
-sudo yum install -y go mariadb-server mariadb
-```
+* mysql (optionnal)
 
 ### Installing
 
-* go get https://github.com/ewhal/Pastebin
-* make will automatically download the dependencies for Pastebin
+* go get https://github.com/jf-guillou/pastengo
 * cp config.example.json config.json
 * nano config.json
-* Configure port and database details
+* Configure address, port and database details
 
 ## License
 

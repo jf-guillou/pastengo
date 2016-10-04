@@ -48,6 +48,7 @@ var dbString, dbType string
 
 // MAX_ID_LEN sets paste ID maximum string length
 const MAX_ID_LEN int = 30
+
 // MAX_KEY_LEN sets delkey maximum string length
 const MAX_KEY_LEN int = 40
 
