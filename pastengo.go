@@ -8,12 +8,12 @@ import (
 	"encoding/json"
 	"html"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"time"
-    "io"
-    "regexp"
 
 	duration "github.com/channelmeter/iso8601duration"
 	"github.com/dchest/uniuri"
@@ -45,11 +45,14 @@ var configuration Configuration
 
 // DB configuration used by SQL driver
 var dbString, dbType string
+
 // Paste ID maximum string length
 const MAX_ID_LEN int = 30
 const MAX_KEY_LEN int = 40
+
 // Paste ID authorized characters
-var pasteRegex *regexp.Regexp = regexp.MustCompile("[^"+string(uniuri.StdChars)+"]")
+var pasteRegex *regexp.Regexp = regexp.MustCompile("[^" + string(uniuri.StdChars) + "]")
+
 // HTML templates for rendering
 var templates = template.Must(template.ParseFiles(
 	"assets/html/paste.html",
@@ -57,9 +60,10 @@ var templates = template.Must(template.ParseFiles(
 ))
 
 // Error structs
-type InvalidPasteError struct {}
+type InvalidPasteError struct{}
+
 func (e *InvalidPasteError) Error() string {
-    return "Invalid paste"
+	return "Invalid paste"
 }
 
 // Page generation struct
@@ -84,34 +88,34 @@ type Response struct {
 
 // Short database open
 func GetDB() *sql.DB {
-    db, err := sql.Open(dbType, dbString)
-    if err != nil {
-        log.Fatal("db.Open:", err)
-    }
-    return db
+	db, err := sql.Open(dbType, dbString)
+	if err != nil {
+		log.Fatal("db.Open:", err)
+	}
+	return db
 }
 
 // Use uniuri to generate a random string that isn't in the database
 func GenerateName() (string, error) {
-    db := GetDB()
+	db := GetDB()
 	defer db.Close()
 
-    for {
-        id := uniuri.NewLen(configuration.Length)
+	for {
+		id := uniuri.NewLen(configuration.Length)
 
-        // query database if id exists and if it does call generateName again
-        res, err := db.Query("SELECT id FROM pastebin WHERE id=?", id)
-        if err != nil && err != sql.ErrNoRows {
-            return "", err
-        } else if err == sql.ErrNoRows || !res.Next() {
-            return id, nil
-        }
-    }
+		// query database if id exists and if it does call generateName again
+		res, err := db.Query("SELECT id FROM pastebin WHERE id=?", id)
+		if err != nil && err != sql.ErrNoRows {
+			return "", err
+		} else if err == sql.ErrNoRows || !res.Next() {
+			return id, nil
+		}
+	}
 }
 
 // Check paste ID for unauthorized characters
 func ValidPasteId(pasteId string) bool {
-    return !pasteRegex.Match([]byte(pasteId))
+	return !pasteRegex.Match([]byte(pasteId))
 }
 
 // Hash paste content used for duplicate checks
@@ -132,16 +136,16 @@ func DurationFromExpiry(expiry string) time.Duration {
 		log.Println(err)
 	}
 
-    if (dura.Years > 20) { // Make sure we don't overflow duration at some point
-        dura.Years = 20;
-    }
+	if dura.Years > 20 { // Make sure we don't overflow duration at some point
+		dura.Years = 20
+	}
 
 	return dura.ToDuration()
 }
 
 // Save paste to database
 func Save(raw string, expiry string) (*Response, error) {
-    db := GetDB()
+	db := GetDB()
 	defer db.Close()
 
 	// hash paste data and query database to see if paste exists
@@ -153,19 +157,19 @@ func Save(raw string, expiry string) (*Response, error) {
 			var id, hash, paste, delkey string
 			err := query.Scan(&id, &hash, &paste, &delkey)
 			if err != nil {
-                return nil, err
+				return nil, err
 			}
 			url := configuration.Address + "/" + id
 			return &Response{true, id, hash, url, len(paste), delkey}, nil
 		}
 	} else if err != sql.ErrNoRows {
-        return nil, err
-    }
+		return nil, err
+	}
 
 	id, err := GenerateName()
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 	url := configuration.Address + "/" + id
 
 	const timeFormat = "2006-01-02 15:04:05"
@@ -176,11 +180,11 @@ func Save(raw string, expiry string) (*Response, error) {
 
 	stmt, err := db.Prepare("INSERT INTO pastebin(id, hash, data, delkey, expiry) values(?,?,?,?,?)")
 	if err != nil {
-        return nil, err
+		return nil, err
 	}
 	_, err = stmt.Exec(id, sha, dataEscaped, delKey, expiryTime)
 	if err != nil {
-        return nil, err
+		return nil, err
 	}
 
 	return &Response{true, id, sha, url, len(dataEscaped), delKey}, nil
@@ -188,23 +192,23 @@ func Save(raw string, expiry string) (*Response, error) {
 
 // Extract paste from database
 func GetPaste(paste string) (string, error) {
-    pasteId := html.EscapeString(paste)
-    if len(pasteId) > MAX_ID_LEN {
-        return "", &InvalidPasteError{}
-    }
-    if !ValidPasteId(pasteId) {
-        return "", &InvalidPasteError{}
-    }
+	pasteId := html.EscapeString(paste)
+	if len(pasteId) > MAX_ID_LEN {
+		return "", &InvalidPasteError{}
+	}
+	if !ValidPasteId(pasteId) {
+		return "", &InvalidPasteError{}
+	}
 
-    db := GetDB()
+	db := GetDB()
 	defer db.Close()
 
 	var s, expiry string
 	err := db.QueryRow("SELECT data, expiry FROM pastebin WHERE id=?", pasteId).Scan(&s, &expiry)
 	if err != nil {
-        if err == sql.ErrNoRows {
-            return "", &InvalidPasteError{}
-        }
+		if err == sql.ErrNoRows {
+			return "", &InvalidPasteError{}
+		}
 		return "", err
 	}
 
@@ -236,22 +240,22 @@ func SaveHandler(w http.ResponseWriter, r *http.Request) {
 	paste := r.FormValue("p")
 	expiry := r.FormValue("expiry")
 	if paste == "" { // Empty paste, go back
-        http.Redirect(w, r, configuration.Address, http.StatusFound)
+		http.Redirect(w, r, configuration.Address, http.StatusFound)
 		return
 	}
 
 	b, err := Save(paste, expiry)
-    if err != nil {
-        switch err.(type) {
-        case *InvalidPasteError:
-            http.Error(w, err.Error(), http.StatusNotFound)
-        default:
-            http.Error(w, err.Error(), http.StatusInternalServerError)
-        }
-        return
-    }
+	if err != nil {
+		switch err.(type) {
+		case *InvalidPasteError:
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
 
-    http.Redirect(w, r, b.URL, http.StatusFound)
+	http.Redirect(w, r, b.URL, http.StatusFound)
 }
 
 // Handle raw paste content display
@@ -260,19 +264,19 @@ func RawHandler(w http.ResponseWriter, r *http.Request) {
 	paste := vars["pasteId"]
 
 	s, err := GetPaste(paste)
-    if err != nil {
-        switch err.(type) {
-        case *InvalidPasteError:
-            http.Error(w, err.Error(), http.StatusNotFound)
-        default:
-            http.Error(w, err.Error(), http.StatusInternalServerError)
-        }
-        return
-    }
+	if err != nil {
+		switch err.(type) {
+		case *InvalidPasteError:
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
 
-    w.Header().Set("Content-Type", "text/plain; charset=UTF-8; imeanit=yes")
-    // simply write string to browser
-    io.WriteString(w, s)
+	w.Header().Set("Content-Type", "text/plain; charset=UTF-8; imeanit=yes")
+	// simply write string to browser
+	io.WriteString(w, s)
 }
 
 // Handle paste content download
@@ -281,20 +285,20 @@ func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	paste := vars["pasteId"]
 
 	s, err := GetPaste(paste)
-    if err != nil {
-        switch err.(type) {
-        case *InvalidPasteError:
-            http.Error(w, err.Error(), http.StatusNotFound)
-        default:
-            http.Error(w, err.Error(), http.StatusInternalServerError)
-        }
-        return
-    }
+	if err != nil {
+		switch err.(type) {
+		case *InvalidPasteError:
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
 
-    // Set header to an attachment so browser will automatically download it
-    w.Header().Set("Content-Disposition", "attachment; filename=" + paste)
-    w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
-    io.WriteString(w, s)
+	// Set header to an attachment so browser will automatically download it
+	w.Header().Set("Content-Disposition", "attachment; filename="+paste)
+	w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
+	io.WriteString(w, s)
 }
 
 // Handle the generation of paste pages with the links
@@ -303,15 +307,15 @@ func PasteHandler(w http.ResponseWriter, r *http.Request) {
 	paste := vars["pasteId"]
 
 	s, err := GetPaste(paste)
-    if err != nil {
-        switch err.(type) {
-        case *InvalidPasteError:
-            http.Error(w, err.Error(), http.StatusNotFound)
-        default:
-            http.Error(w, err.Error(), http.StatusInternalServerError)
-        }
-        return
-    }
+	if err != nil {
+		switch err.(type) {
+		case *InvalidPasteError:
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
 
 	// button links
 	link := configuration.Address + "/" + paste + "/raw"
@@ -336,18 +340,18 @@ func PasteHandler(w http.ResponseWriter, r *http.Request) {
 // Handle clone command and prefill new paste template with content
 func CloneHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-    paste := vars["pasteId"]
+	paste := vars["pasteId"]
 
 	s, err := GetPaste(paste)
-    if err != nil {
-        switch err.(type) {
-        case *InvalidPasteError:
-            http.Error(w, err.Error(), http.StatusNotFound)
-        default:
-            http.Error(w, err.Error(), http.StatusInternalServerError)
-        }
-        return
-    }
+	if err != nil {
+		switch err.(type) {
+		case *InvalidPasteError:
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
 
 	// button links
 	link := configuration.Address + paste + "/raw"
@@ -371,42 +375,42 @@ func CloneHandler(w http.ResponseWriter, r *http.Request) {
 
 // Open and read config file, set up database
 func LoadConfiguration() {
-    file, err := os.Open("config.json")
-    if err != nil {
-        panic(err)
-    }
+	file, err := os.Open("config.json")
+	if err != nil {
+		panic(err)
+	}
 
-    decoder := json.NewDecoder(file)
-    err = decoder.Decode(&configuration)
-    if err != nil {
-        panic(err)
-    }
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&configuration)
+	if err != nil {
+		panic(err)
+	}
 
-    if (configuration.Length > MAX_ID_LEN) {
-        configuration.Length = MAX_ID_LEN
-    }
+	if configuration.Length > MAX_ID_LEN {
+		configuration.Length = MAX_ID_LEN
+	}
 
-    switch configuration.DBType {
-    case "mysql":
-        dbString = configuration.DBUsername + ":" + configuration.DBPassword + "@/" + configuration.DBName + "?charset=utf8"
-        dbType = configuration.DBType
-    case "sqlite3":
-        dbString = "./" + configuration.DBName + "?charset=utf8"
-        dbType = configuration.DBType
-    default:
-        panic("Incorrect DBType configuration")
-    }
+	switch configuration.DBType {
+	case "mysql":
+		dbString = configuration.DBUsername + ":" + configuration.DBPassword + "@/" + configuration.DBName + "?charset=utf8"
+		dbType = configuration.DBType
+	case "sqlite3":
+		dbString = "./" + configuration.DBName + "?charset=utf8"
+		dbType = configuration.DBType
+	default:
+		panic("Incorrect DBType configuration")
+	}
 }
 
 // Verify DB link and table existence. Creates it if necessary
 func CheckDB() {
-    db := GetDB()
-    defer db.Close()
+	db := GetDB()
+	defer db.Close()
 
-    _, err := db.Query("SELECT 1 FROM pastebin LIMIT 1")
-    if err != nil {
-        log.Println(err)
-        _, err = db.Exec(`
+	_, err := db.Query("SELECT 1 FROM pastebin LIMIT 1")
+	if err != nil {
+		log.Println(err)
+		_, err = db.Exec(`
         CREATE TABLE pastebin (
             id VARCHAR(30) NOT NULL,
             hash CHAR(40) DEFAULT NULL,
@@ -415,14 +419,14 @@ func CheckDB() {
             expiry DATETIME,
             PRIMARY KEY (id)
         );`)
-        if err != nil {
-            log.Fatal(err)
-        }
-    }
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func main() {
-    LoadConfiguration()
+	LoadConfiguration()
 	CheckDB()
 
 	router := mux.NewRouter()
