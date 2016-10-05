@@ -24,6 +24,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+//go:generate cp config.example.json $PWD/config.json
+//go:generate cp -r assets $PWD/
+
 // Configuration read from config.json
 type Configuration struct {
 	// ADDRESS that pastengo will return links for
