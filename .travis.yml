@@ -7,12 +7,7 @@ env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 
 install:
-  - go get github.com/channelmeter/iso8601duration
-  - go get github.com/dchest/uniuri
-  - go get github.com/gorilla/mux
-  - go get github.com/go-sql-driver/mysql
-  - go get github.com/mattn/go-sqlite3
+  - go install ./...
 
 script:
-  - go install ./...
   - go test -v ./...
