@@ -36,6 +36,7 @@ go generate github.com/jf-guillou/pastengo
 go get -u github.com/jf-guillou/pastengo
 cd /path/to/install
 go build github.com/jf-guillou/pastengo
+go generate github.com/jf-guillou/pastengo
 ```
 
 ### Configuration
@@ -65,6 +66,10 @@ go generate relies on commands that may not be available on your system.
 Doing this manually is pretty simple :
 * copy folder ```$GOPATH/src/github.com/jf-guillou/pastengo/assets``` to ```/path/to/install/```
 * copy file ```$GOPATH/src/github.com/jf-guillou/pastengo/config.example.json``` to ```/path/to/install/config.json```
+
+## TODO
+
+* Avoid configuration overwrite on update
 
 ## License
 
