@@ -121,7 +121,7 @@ func TestGenerateName(t *testing.T) {
 	if !ValidPasteId(name) {
 		t.Errorf("expected GenerateName to output a valid paste ID : %s", name)
 	}
-	name2, err := GenerateName()
+	name2, _ := GenerateName()
 	if name == name2 {
 		t.Errorf("expected %s and %s to be 2 different GenerateName results", name, name2)
 	}
@@ -129,7 +129,7 @@ func TestGenerateName(t *testing.T) {
 	db := GetDB()
 	defer db.Close()
 	db.Exec("INSERT INTO pastebin (id) VALUES (?)", name)
-	name3, err := GenerateName()
+	name3, _ := GenerateName()
 	if name == name3 {
 		t.Errorf("expected %s and %s to be 2 different GenerateName results", name, name3)
 	}
@@ -207,7 +207,7 @@ func TestSave(t *testing.T) {
 		t.Errorf("expected two identical Save() to give same hash : %s != %s", res.Sha1, res2.Sha1)
 	}
 	if res.Size != res2.Size {
-		t.Errorf("expected two identical Save() to give same size : %s != %s", res.Size, res2.Size)
+		t.Errorf("expected two identical Save() to give same size : %d != %d", res.Size, res2.Size)
 	}
 	if res.Delkey != res2.Delkey {
 		t.Errorf("expected two identical Save() to give same delkey : %s != %s", res.Delkey, res2.Delkey)
