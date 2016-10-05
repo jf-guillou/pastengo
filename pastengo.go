@@ -160,12 +160,13 @@ func Save(raw string, expiry string) (*Response, error) {
 
 	// hash paste data and query database to see if paste exists
 	sha := Sha1(raw)
-	query, err := db.Query("SELECT id, hash, data, delkey FROM pastebin WHERE hash=?", sha)
+	rows, err := db.Query("SELECT id, hash, data, delkey FROM pastebin WHERE hash=?", sha)
 
 	if err == nil {
-		for query.Next() {
+		defer rows.Close()
+		for rows.Next() {
 			var id, hash, paste, delkey string
-			err := query.Scan(&id, &hash, &paste, &delkey)
+			err := rows.Scan(&id, &hash, &paste, &delkey)
 			if err != nil {
 				return nil, err
 			}
