@@ -25,7 +25,7 @@ Supports mysql and sqlite3 database drivers.
 ### Installing
 
 ```
-go get https://github.com/jf-guillou/pastengo
+go get github.com/jf-guillou/pastengo
 cd /path/to/install
 go build github.com/jf-guillou/pastengo
 go generate github.com/jf-guillou/pastengo
@@ -33,7 +33,7 @@ go generate github.com/jf-guillou/pastengo
 
 ### Updating
 ```
-go get -u https://github.com/jf-guillou/pastengo
+go get -u github.com/jf-guillou/pastengo
 cd /path/to/install
 go build github.com/jf-guillou/pastengo
 ```
